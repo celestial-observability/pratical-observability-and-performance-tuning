@@ -305,7 +305,54 @@ func getFlash(w http.ResponseWriter, r *http.Request, key string) string {
 }
 
 func makePostsNew(ctx context.Context, results []Post, csrfToken string, allComments bool) ([]Post, error) {
+	if len(results) == 0 {
+		return []Post{}, nil
+	}
 	var posts []Post
+
+	rawQuery := `
+SELECT
+	comments.id as comment_id
+	, comments.post_id as comment_post_id
+	, comments.user_id as comment_user_id
+	, comments.comment as comment_comment
+	, comments.created_at as comment_created_at
+
+	, users.id as user_id
+	, users.account_name as user_account_name
+	, users.passhash as user_passhash
+	, users.authority as user_authority
+	, users.del_flg as user_del_flg
+	, users.created_at as user_created_at
+FROM comments
+JOIN users ON comments.user_id = users.id
+WHERE post_id IN (?)
+ORDER BY comments.created_at DESC
+`
+
+	// コメントをまとめて取得
+	postIds := make([]int, len(results))
+	for i, p := range results {
+		postIds[i] = p.ID
+	}
+	query, args, err := sqlx.In(rawQuery, postIds)
+	if err != nil {
+		fmt.Println("コメントをまとめて取得で失敗1:", err)
+		return nil, err
+	}
+	query = db.Rebind(query)
+	var commentUsers []CommentUser
+	err = db.SelectContext(ctx, &commentUsers, query, args...)
+	if err != nil {
+		fmt.Println("コメントをまとめて取得で失敗2:", err)
+		return nil, err
+	}
+	builtComments := buildComments(commentUsers)
+
+	commentsMap := map[int][]Comment{}
+	for _, c := range builtComments {
+		commentsMap[c.PostID] = append(commentsMap[c.PostID], c)
+	}
 
 	for _, p := range results {
 		err := db.GetContext(ctx, &p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
@@ -313,34 +360,15 @@ func makePostsNew(ctx context.Context, results []Post, csrfToken string, allComm
 			return nil, err
 		}
 
-		query := `
-SELECT
-  comments.id as comment_id
-  , comments.post_id as comment_post_id
-  , comments.user_id as comment_user_id
-  , comments.comment as comment_comment
-  , comments.created_at as comment_created_at
+		comments := commentsMap[p.ID]
 
-  , users.id as user_id
-  , users.account_name as user_account_name
-  , users.passhash as user_passhash
-  , users.authority as user_authority
-  , users.del_flg as user_del_flg
-  , users.created_at as user_created_at
-FROM comments
-JOIN users ON comments.user_id = users.id
-WHERE comments.post_id = ?
-ORDER BY comments.created_at DESC
-`
 		if !allComments {
-			query += " LIMIT 3"
+			limit := len(comments)
+			if limit > 3 {
+				limit = 3
+			}
+			comments = comments[:limit]
 		}
-		var commentUsers []CommentUser
-		err = db.SelectContext(ctx, &commentUsers, query, p.ID)
-		if err != nil {
-			return nil, err
-		}
-		comments := buildComments(commentUsers)
 
 		// reverse
 		for i, j := 0, len(comments)-1; i < j; i, j = i+1, j-1 {
