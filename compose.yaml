@@ -77,6 +77,23 @@ services:
         source: ${PWD}/var/lib/grafana/dashboards/
         target: /var/lib/grafana/dashboards/
 
+  # Pyroscope は公式
+  # https://hub.docker.com/r/grafana/pyroscope/tags
+  pyroscope:
+    logging:
+      <<: *default-logging
+    image: grafana/pyroscope:main-8d26bca
+    ports:
+      - 4040:4040
+    volumes:
+      - type: bind
+        source: ${PWD}/etc/pyroscope/
+        target: /etc/pyroscope/
+      - type: volume
+        source: pyroscope-data
+        target: /data/
+
 volumes:
   clickhouse-data:
   grafana-plugins:
+  pyroscope-data:

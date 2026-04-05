@@ -34,6 +34,7 @@ deploy_perf_servers() {
 
   rsync -az ./etc/grafana "$TARGET_HOST":~/etc/
   rsync -az ./etc/clickhouse-server "$TARGET_HOST":~/etc/
+  rsync -az ./etc/pyroscope "$TARGET_HOST":~/etc/
   rsync -az ./var/lib "$TARGET_HOST":~/var/
   rsync -az ./compose.yaml "$TARGET_HOST":~/
 
