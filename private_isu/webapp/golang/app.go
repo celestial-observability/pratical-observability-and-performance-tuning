@@ -71,7 +71,6 @@ type Post struct {
 type Comment struct {
 	ID              int       `db:"id"`
 	PostID          int       `db:"post_id"`
-	UserID          int       `db:"user_id"`
 	Comment         string    `db:"comment"`
 	CreatedAt       time.Time `db:"created_at"`
 	UserAccountName string    `db:"user_account_name"`
@@ -269,7 +268,6 @@ func makePostsNew(ctx context.Context, results []Post, csrfToken string, allComm
 SELECT
   id
   , post_id
-  , user_id
   , comment
   , created_at
   , user_account_name

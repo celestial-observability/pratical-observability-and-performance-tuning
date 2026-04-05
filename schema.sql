@@ -2,7 +2,7 @@ CREATE TABLE `comments` (
   `id` int NOT NULL AUTO_INCREMENT,
   `post_id` int NOT NULL,
   `user_id` int NOT NULL,
-  `comment` text NOT NULL,
+  `comment` varchar(128) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `user_account_name` varchar(64) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`)
@@ -29,7 +29,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `account_name` (`account_name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1020 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-ALTER TABLE comments ADD INDEX post_id_and_created_at_idx (post_id, created_at desc);
+ALTER TABLE comments ADD INDEX covering_idx (post_id, created_at desc, `comment`, user_account_name);
 ALTER TABLE comments ADD INDEX user_id_idx (user_id);
 ALTER TABLE posts ADD INDEX created_at_idx (created_at desc);
 ALTER TABLE posts ADD INDEX user_id_and_created_at_idx (user_id, created_at desc);
