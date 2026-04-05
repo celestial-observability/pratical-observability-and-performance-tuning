@@ -23,6 +23,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
+	"github.com/grafana/pyroscope-go"
 	"github.com/jmoiron/sqlx"
 	"github.com/riandyrn/otelchi"
 	"go.opentelemetry.io/otel"
@@ -857,6 +858,7 @@ func postAdminBanned(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	setupPyroscope()
 	shutdown := initTracer()
 	defer shutdown()
 
@@ -932,4 +934,42 @@ func main() {
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", r))
+}
+
+// Pyroscope初期化処理
+// 再起動時、2秒以内に接続できた場合のみ Pyroscope 開始
+func setupPyroscope() {
+	serverAddr := "192.168.1.30:4040"
+	url := "http://" + serverAddr + "/ready"
+
+	// HTTPでreadyチェック（2秒以内に200なら起動）
+	client := http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		log.Printf("[pyroscope] %s に接続できません: %v", url, err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("[pyroscope] %s がreadyではありません (status=%d)", url, resp.StatusCode)
+		return
+	}
+
+	// 接続できた場合のみ Pyroscope 開始
+	_, err = pyroscope.Start(pyroscope.Config{
+		ApplicationName: "isu-go",
+		ServerAddress:   "http://" + serverAddr,
+		Logger:          nil, // pyroscope.StandardLogger, // デバッグログを吐く
+		ProfileTypes: []pyroscope.ProfileType{
+			pyroscope.ProfileCPU,        // cpu: CPUプロファイル(デフォは10秒単位で収集)
+			pyroscope.ProfileAllocSpace, // allocs: 割り当てられたメモリサイズ(bytes)
+			pyroscope.ProfileInuseSpace, // heap: 現在使用中のメモリサイズ(bytes)
+			pyroscope.ProfileGoroutines, // goroutines: ゴルーチンの数
+		},
+	})
+	if err != nil {
+		log.Printf("[pyroscope] 初期化失敗: %v", err)
+	} else {
+		log.Printf("[pyroscope] 初期化成功: %s に継続的プロファイリングをします", serverAddr)
+	}
 }
