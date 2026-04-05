@@ -764,14 +764,7 @@ LIMIT 20
 		return
 	}
 
-	fmap := template.FuncMap{
-		"imageURL": imageURL,
-	}
-
-	template.Must(template.New("posts.html").Funcs(fmap).ParseFiles(
-		getTemplPath("posts.html"),
-		getTemplPath("post.html"),
-	)).Execute(w, posts)
+	postsHtml(w, posts)
 }
 
 func getPostsID(w http.ResponseWriter, r *http.Request) {
