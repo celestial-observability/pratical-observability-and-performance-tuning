@@ -93,6 +93,46 @@ type PostUser struct {
 	UserCreatedAt   time.Time `db:"user_created_at"`
 }
 
+type CommentUser struct {
+	CommentID        int       `db:"comment_id"`
+	CommentPostID    int       `db:"comment_post_id"`
+	CommentUserID    int       `db:"comment_user_id"`
+	CommentComment   string    `db:"comment_comment"`
+	CommentCreatedAt time.Time `db:"comment_created_at"`
+
+	UserID          int       `db:"user_id"`
+	UserAccountName string    `db:"user_account_name"`
+	UserPasshash    string    `db:"user_passhash"`
+	UserAuthority   int       `db:"user_authority"`
+	UserDelFlg      int       `db:"user_del_flg"`
+	UserCreatedAt   time.Time `db:"user_created_at"`
+}
+
+// 各CommentUserからUserを含むCommentを組み立てる
+func buildComments(commentUsers []CommentUser) []Comment {
+	comments := make([]Comment, len(commentUsers))
+	for i, cu := range commentUsers {
+		comments[i] = Comment{
+			ID:        cu.CommentID,
+			PostID:    cu.CommentPostID,
+			UserID:    cu.CommentUserID,
+			Comment:   cu.CommentComment,
+			CreatedAt: cu.CommentCreatedAt,
+
+			User: User{
+				ID:          cu.UserID,
+				AccountName: cu.UserAccountName,
+				Passhash:    cu.UserPasshash,
+				Authority:   cu.UserAuthority,
+				DelFlg:      cu.UserDelFlg,
+				CreatedAt:   cu.UserCreatedAt,
+			},
+		}
+	}
+
+	return comments
+}
+
 // 各PostUserからUserを含むPostを組み立てる
 func buildPosts(postUsers []PostUser) []Post {
 	posts := make([]Post, len(postUsers))
@@ -273,22 +313,34 @@ func makePostsNew(ctx context.Context, results []Post, csrfToken string, allComm
 			return nil, err
 		}
 
-		query := "SELECT * FROM `comments` WHERE `post_id` = ? ORDER BY `created_at` DESC"
+		query := `
+SELECT
+  comments.id as comment_id
+  , comments.post_id as comment_post_id
+  , comments.user_id as comment_user_id
+  , comments.comment as comment_comment
+  , comments.created_at as comment_created_at
+
+  , users.id as user_id
+  , users.account_name as user_account_name
+  , users.passhash as user_passhash
+  , users.authority as user_authority
+  , users.del_flg as user_del_flg
+  , users.created_at as user_created_at
+FROM comments
+JOIN users ON comments.user_id = users.id
+WHERE comments.post_id = ?
+ORDER BY comments.created_at DESC
+`
 		if !allComments {
 			query += " LIMIT 3"
 		}
-		var comments []Comment
-		err = db.SelectContext(ctx, &comments, query, p.ID)
+		var commentUsers []CommentUser
+		err = db.SelectContext(ctx, &commentUsers, query, p.ID)
 		if err != nil {
 			return nil, err
 		}
-
-		for i := range comments {
-			err := db.GetContext(ctx, &comments[i].User, "SELECT * FROM `users` WHERE `id` = ?", comments[i].UserID)
-			if err != nil {
-				return nil, err
-			}
-		}
+		comments := buildComments(commentUsers)
 
 		// reverse
 		for i, j := 0, len(comments)-1; i < j; i, j = i+1, j-1 {
