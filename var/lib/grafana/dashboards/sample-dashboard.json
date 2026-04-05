@@ -1097,6 +1097,56 @@
       ],
       "title": "時間範囲内の最新ベンチのspan数(for N+1問題)",
       "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "id": 23,
+      "panels": [],
+      "title": "プロファイリング(Pyroscope)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-pyroscope-datasource",
+        "uid": "pyroscope"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "id": 22,
+      "options": {},
+      "pluginVersion": "12.4.0-20585723282",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-pyroscope-datasource",
+            "uid": "pyroscope"
+          },
+          "groupBy": [
+            "pyroscope_spy"
+          ],
+          "labelSelector": "{}",
+          "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
+          "queryType": "profile",
+          "refId": "A",
+          "spanSelector": []
+        }
+      ],
+      "title": "プロファイリング",
+      "type": "flamegraph"
     }
   ],
   "preload": false,
