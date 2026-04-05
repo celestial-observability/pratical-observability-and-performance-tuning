@@ -7,3 +7,13 @@ services:
   ch:
     image: clickhouse:25.12.1
     entrypoint: ''
+  # alpのDocker imageは公式配布がないため、自作
+  alp:
+    build:
+      context: ./dockerfiles/
+      dockerfile: Dockerfile.alp
+    working_dir: /works/
+    volumes:
+      - type: bind
+        source: ${PWD}/
+        target: /works/

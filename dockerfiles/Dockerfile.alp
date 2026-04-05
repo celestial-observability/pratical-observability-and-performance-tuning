@@ -1,0 +1,14 @@
+FROM debian:12-slim
+ARG ALP_VERSION=1.0.21
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl \
+  && rm -rf /var/lib/apt/lists/*
+
+# alp
+# Download link例: https://github.com/tkuchiki/alp/releases/download/v1.0.21/alp_linux_arm64.tar.gz
+RUN ARCH="$(dpkg --print-architecture)" \
+  && curl -fsSLO https://github.com/tkuchiki/alp/releases/download/v${ALP_VERSION}/alp_linux_${ARCH}.tar.gz \
+  && tar -xzf ./alp_linux_${ARCH}.tar.gz -C /usr/local/bin alp \
+  && rm ./alp_linux_${ARCH}.tar.gz \
+  && alp --version
