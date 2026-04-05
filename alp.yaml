@@ -1,0 +1,10 @@
+matching_groups:
+  - '/image/\d+\.(jpg|png|gif)'
+  - '/posts/\d+'
+  - '/@\w+'
+sort: sum
+reverse: true
+# 順番を固定するために、明示的に記述
+output: count,1xx,2xx,3xx,4xx,5xx,method,uri,min,max,sum,avg,p90,p95,p99,stddev,min_body,max_body,sum_body,avg_body
+format: tsv
+noheaders: true
