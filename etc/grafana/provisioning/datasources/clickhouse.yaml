@@ -1,0 +1,22 @@
+# GrafanaのClickHouseの設定
+# https://grafana.com/grafana/plugins/grafana-clickhouse-datasource/
+# から With a configuration file を参照
+#
+apiVersion: 1
+datasources:
+  - name: clickhouse-local # 画面のDatasource名
+    uid: clickhouse-local  # ダッシュボードから参照されたり、URLパスに利用される
+    type: grafana-clickhouse-datasource
+    access: proxy
+    secureJsonData:
+      password: ${CLICKHOUSE_PASSWORD} # パスワード
+    jsonData:
+      host: ${CLICKHOUSE_HOST}     # ホスト名
+      username: ${CLICKHOUSE_USER} # ユーザー名
+      protocol: native             # native or http
+      port: 9000                   # デフォルト値
+      secure: false                # セキュア接続の場合true
+      defaultDatabase: ${CLICKHOUSE_DEFAULT_DB} # デフォルトDB
+      defaultTable: ${CLICKHOUSE_DEFAULT_TABLE} # デフォルトテーブル
+    isDefault: true
+    editable: true

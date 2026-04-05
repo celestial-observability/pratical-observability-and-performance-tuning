@@ -1,0 +1,10 @@
+# 参考
+# https://grafana.com/docs/grafana/latest/administration/provisioning/#example-dashboard-configuration-file
+apiVersion: 1
+providers:
+  - name: 'default'
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

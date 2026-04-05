@@ -44,5 +44,39 @@ services:
         source: clickhouse-data
         target: /var/lib/clickhouse/
 
+  # grafana は公式
+  # https://hub.docker.com/r/grafana/grafana
+  grafana:
+    logging:
+      <<: *default-logging
+    image: grafana/grafana:12.4.0-20585723282-ubuntu
+    ports:
+      - 3000:3000
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
+      GF_USERS_DEFAULT_THEME: light
+      GF_USERS_DEFAULT_LANGUAGE: ja-JP
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_USER: admin
+      CLICKHOUSE_PASSWORD: admin
+      CLICKHOUSE_DEFAULT_DB: default
+      CLICKHOUSE_DEFAULT_TABLE: results
+    volumes:
+      - type: volume
+        source: grafana-plugins
+        target: /var/lib/grafana/plugins/
+      - type: bind
+        source: ${PWD}/etc/grafana/provisioning/datasources/
+        target: /etc/grafana/provisioning/datasources/
+      - type: bind
+        source: ${PWD}/etc/grafana/provisioning/dashboards/
+        target: /etc/grafana/provisioning/dashboards/
+      - type: bind
+        source: ${PWD}/var/lib/grafana/dashboards/
+        target: /var/lib/grafana/dashboards/
+
 volumes:
   clickhouse-data:
+  grafana-plugins:
