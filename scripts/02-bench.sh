@@ -32,6 +32,9 @@ ssh -F "$SSH_CONFIG_FILE" bench "touch ~/.hushlogin" 2>&1 || {
 #
 # ベンチマーク
 #
+mkdir -p ./tmp
+rm -rf ./tmp/result.json
 ssh -F "$SSH_CONFIG_FILE" bench 'private_isu/benchmarker/bin/benchmarker -u ./private_isu/benchmarker/userdata -t http://192.168.1.10 | tee result.json'
+rsync -az bench:~/result.json ./tmp/result.json
 
 end_timer "$@"
