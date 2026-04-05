@@ -18,6 +18,7 @@ deploy: ## デプロイ
 .PHONY: bench
 bench: ## ベンチマークの実行
 	@scripts/02-bench.sh
+	@scripts/02-prepare-analyze.sh web $$(jq -r '.score' tmp/result.json)
 
 ################################################################################
 # Utility-Command help
