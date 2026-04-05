@@ -234,12 +234,117 @@
       "type": "table"
     },
     {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "clickhouse-local"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 17,
+        "x": 0,
+        "y": 6
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.4.0-20585723282",
+      "targets": [
+        {
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "",
+              "limit": 1000,
+              "mode": "list",
+              "queryType": "table",
+              "table": ""
+            }
+          },
+          "pluginVersion": "4.14.0",
+          "queryType": "table",
+          "rawSql": "with data as (\nselect\n  $__timeInterval(TimeUnix) as \"time\"\n  , splitByChar('.', ResourceAttributes['host.name'])[1] as private_ip\n  , Attributes['cpu'] as cpu\n  , Attributes['state'] as state\n  , sum(Value) as v\nfrom otel_metrics_sum\nwhere\n  ( $__fromTime <= time and time <= $__toTime )\n  and MetricName = 'system.cpu.time'\n  and private_ip = 'ip-192-168-1-10'\ngroup by private_ip, Attributes['cpu'], Attributes['state'], time\norder by time asc\n), diff as (\nselect\n  time\n  , private_ip\n  , cpu\n  , state\n  , v - lag(v) over (partition by private_ip, cpu, state order by time) as diff\nfrom data\norder by time\n), total as (\nselect\n  time\n  , private_ip\n  , cpu\n  , sum(diff) as total\nfrom diff\ngroup by time, private_ip, cpu\n)\nselect\n  diff.time\n  , private_ip\n  , cpu\n  , sumIf(diff.diff, diff.state in ('user', 'system')) / total.total * 100 as  \"CPU使用率\"\nfrom diff\njoin total using (time, cpu, private_ip)\nwhere diff.diff >= 0\ngroup by diff.time, private_ip, cpu, total.total\norder by diff.time",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU使用率",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 6
+        "y": 12
       },
       "id": 9,
       "panels": [],
@@ -274,7 +379,7 @@
         "h": 7,
         "w": 4,
         "x": 0,
-        "y": 7
+        "y": 13
       },
       "id": 13,
       "options": {
@@ -519,7 +624,7 @@
         "h": 7,
         "w": 20,
         "x": 4,
-        "y": 7
+        "y": 13
       },
       "id": 7,
       "options": {
@@ -556,7 +661,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 20
       },
       "id": 14,
       "panels": [],
@@ -591,7 +696,7 @@
         "h": 13,
         "w": 4,
         "x": 0,
-        "y": 15
+        "y": 21
       },
       "id": 16,
       "options": {
@@ -720,7 +825,7 @@
         "h": 13,
         "w": 20,
         "x": 4,
-        "y": 15
+        "y": 21
       },
       "id": 15,
       "options": {
