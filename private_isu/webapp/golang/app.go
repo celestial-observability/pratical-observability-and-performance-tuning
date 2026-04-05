@@ -264,57 +264,6 @@ func getFlash(w http.ResponseWriter, r *http.Request, key string) string {
 	}
 }
 
-func makePosts(ctx context.Context, results []Post, csrfToken string, allComments bool) ([]Post, error) {
-	var posts []Post
-
-	for _, p := range results {
-		err := db.GetContext(ctx, &p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		query := "SELECT * FROM `comments` WHERE `post_id` = ? ORDER BY `created_at` DESC"
-		if !allComments {
-			query += " LIMIT 3"
-		}
-		var comments []Comment
-		err = db.SelectContext(ctx, &comments, query, p.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		for i := range comments {
-			err := db.GetContext(ctx, &comments[i].User, "SELECT * FROM `users` WHERE `id` = ?", comments[i].UserID)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		// reverse
-		for i, j := 0, len(comments)-1; i < j; i, j = i+1, j-1 {
-			comments[i], comments[j] = comments[j], comments[i]
-		}
-
-		p.Comments = comments
-
-		err = db.GetContext(ctx, &p.User, "SELECT * FROM `users` WHERE `id` = ?", p.UserID)
-		if err != nil {
-			return nil, err
-		}
-
-		p.CSRFToken = csrfToken
-
-		if p.User.DelFlg == 0 {
-			posts = append(posts, p)
-		}
-		if len(posts) >= postsPerPage {
-			break
-		}
-	}
-
-	return posts, nil
-}
-
 func makePostsNew(ctx context.Context, results []Post, csrfToken string, allComments bool) ([]Post, error) {
 	var posts []Post
 
@@ -595,14 +544,36 @@ func getAccountName(w http.ResponseWriter, r *http.Request) {
 	}
 
 	results := []Post{}
+	postUsers := []PostUser{}
 
-	err = db.SelectContext(ctx, &results, "SELECT `id`, `user_id`, `body`, `mime`, `created_at` FROM `posts` WHERE `user_id` = ? ORDER BY `created_at` DESC", user.ID)
+	query := `
+SELECT
+  posts.id as post_id
+  , posts.user_id as post_user_id
+  , posts.body as post_body
+  , posts.mime as post_mime
+  , posts.created_at as post_created_at
+
+  , users.id as user_id
+  , users.account_name as user_account_name
+  , users.passhash as user_passhash
+  , users.authority as user_authority
+  , users.del_flg as user_del_flg
+  , users.created_at as user_created_at
+FROM posts
+JOIN users ON posts.user_id = users.id
+WHERE posts.user_id = ?
+ORDER BY posts.created_at DESC
+LIMIT 20
+`
+	err = db.SelectContext(ctx, &postUsers, query, user.ID)
 	if err != nil {
 		log.Print(err)
 		return
 	}
+	results = buildPosts(postUsers)
 
-	posts, err := makePosts(ctx, results, getCSRFToken(r), false)
+	posts, err := makePostsNew(ctx, results, getCSRFToken(r), false)
 	if err != nil {
 		log.Print(err)
 		return
@@ -685,13 +656,38 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	results := []Post{}
-	err = db.SelectContext(ctx, &results, "SELECT `id`, `user_id`, `body`, `mime`, `created_at` FROM `posts` WHERE `created_at` <= ? ORDER BY `created_at` DESC", t.Format(ISO8601Format))
+	postUsers := []PostUser{}
+
+	query := `
+SELECT
+  posts.id as post_id
+  , posts.user_id as post_user_id
+  , posts.body as post_body
+  , posts.mime as post_mime
+  , posts.created_at as post_created_at
+
+  , users.id as user_id
+  , users.account_name as user_account_name
+  , users.passhash as user_passhash
+  , users.authority as user_authority
+  , users.del_flg as user_del_flg
+  , users.created_at as user_created_at
+FROM posts
+JOIN users ON posts.user_id = users.id
+WHERE posts.created_at <= ?
+  AND users.del_flg = 0
+ORDER BY posts.created_at DESC
+LIMIT 20
+`
+
+	err = db.SelectContext(ctx, &postUsers, query, t.Format(ISO8601Format))
 	if err != nil {
 		log.Print(err)
 		return
 	}
+	results = buildPosts(postUsers)
 
-	posts, err := makePosts(ctx, results, getCSRFToken(r), false)
+	posts, err := makePostsNew(ctx, results, getCSRFToken(r), false)
 	if err != nil {
 		log.Print(err)
 		return
@@ -722,13 +718,36 @@ func getPostsID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	results := []Post{}
-	err = db.SelectContext(ctx, &results, "SELECT * FROM `posts` WHERE `id` = ?", pid)
+	postUsers := []PostUser{}
+
+	query := `
+SELECT
+  posts.id as post_id
+  , posts.user_id as post_user_id
+  , posts.body as post_body
+  , posts.mime as post_mime
+  , posts.created_at as post_created_at
+
+  , users.id as user_id
+  , users.account_name as user_account_name
+  , users.passhash as user_passhash
+  , users.authority as user_authority
+  , users.del_flg as user_del_flg
+  , users.created_at as user_created_at
+FROM posts
+JOIN users ON posts.user_id = users.id
+WHERE posts.id = ?
+  AND users.del_flg = 0
+`
+
+	err = db.SelectContext(ctx, &postUsers, query, pid)
 	if err != nil {
 		log.Print(err)
 		return
 	}
+	results = buildPosts(postUsers)
 
-	posts, err := makePosts(ctx, results, getCSRFToken(r), true)
+	posts, err := makePostsNew(ctx, results, getCSRFToken(r), true)
 	if err != nil {
 		log.Print(err)
 		return
