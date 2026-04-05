@@ -17,3 +17,12 @@ services:
       - type: bind
         source: ${PWD}/
         target: /works/
+  # docker: percona/percona-toolkit は公式
+  # https://hub.docker.com/r/percona/percona-toolkit
+  pt:
+    image: percona/percona-toolkit:3.7.1
+    working_dir: /works/
+    volumes:
+      - type: bind
+        source: ${PWD}/
+        target: /works/
