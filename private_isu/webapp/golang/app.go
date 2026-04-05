@@ -69,12 +69,12 @@ type Post struct {
 }
 
 type Comment struct {
-	ID        int       `db:"id"`
-	PostID    int       `db:"post_id"`
-	UserID    int       `db:"user_id"`
-	Comment   string    `db:"comment"`
-	CreatedAt time.Time `db:"created_at"`
-	User      User
+	ID              int       `db:"id"`
+	PostID          int       `db:"post_id"`
+	UserID          int       `db:"user_id"`
+	Comment         string    `db:"comment"`
+	CreatedAt       time.Time `db:"created_at"`
+	UserAccountName string    `db:"user_account_name"`
 }
 
 // postsとusersの結合結果用の構造体
@@ -92,46 +92,6 @@ type PostUser struct {
 	UserAuthority   int       `db:"user_authority"`
 	UserDelFlg      int       `db:"user_del_flg"`
 	UserCreatedAt   time.Time `db:"user_created_at"`
-}
-
-type CommentUser struct {
-	CommentID        int       `db:"comment_id"`
-	CommentPostID    int       `db:"comment_post_id"`
-	CommentUserID    int       `db:"comment_user_id"`
-	CommentComment   string    `db:"comment_comment"`
-	CommentCreatedAt time.Time `db:"comment_created_at"`
-
-	UserID          int       `db:"user_id"`
-	UserAccountName string    `db:"user_account_name"`
-	UserPasshash    string    `db:"user_passhash"`
-	UserAuthority   int       `db:"user_authority"`
-	UserDelFlg      int       `db:"user_del_flg"`
-	UserCreatedAt   time.Time `db:"user_created_at"`
-}
-
-// 各CommentUserからUserを含むCommentを組み立てる
-func buildComments(commentUsers []CommentUser) []Comment {
-	comments := make([]Comment, len(commentUsers))
-	for i, cu := range commentUsers {
-		comments[i] = Comment{
-			ID:        cu.CommentID,
-			PostID:    cu.CommentPostID,
-			UserID:    cu.CommentUserID,
-			Comment:   cu.CommentComment,
-			CreatedAt: cu.CommentCreatedAt,
-
-			User: User{
-				ID:          cu.UserID,
-				AccountName: cu.UserAccountName,
-				Passhash:    cu.UserPasshash,
-				Authority:   cu.UserAuthority,
-				DelFlg:      cu.UserDelFlg,
-				CreatedAt:   cu.UserCreatedAt,
-			},
-		}
-	}
-
-	return comments
 }
 
 // 各PostUserからUserを含むPostを組み立てる
@@ -307,22 +267,15 @@ func makePostsNew(ctx context.Context, results []Post, csrfToken string, allComm
 
 	rawQuery := `
 SELECT
-	comments.id as comment_id
-	, comments.post_id as comment_post_id
-	, comments.user_id as comment_user_id
-	, comments.comment as comment_comment
-	, comments.created_at as comment_created_at
-
-	, users.id as user_id
-	, users.account_name as user_account_name
-	, users.passhash as user_passhash
-	, users.authority as user_authority
-	, users.del_flg as user_del_flg
-	, users.created_at as user_created_at
+  id
+  , post_id
+  , user_id
+  , comment
+  , created_at
+  , user_account_name
 FROM comments
-JOIN users ON comments.user_id = users.id
 WHERE post_id IN (?)
-ORDER BY comments.created_at DESC
+ORDER BY created_at DESC
 `
 
 	// コメントをまとめて取得
@@ -336,16 +289,15 @@ ORDER BY comments.created_at DESC
 		return nil, err
 	}
 	query = db.Rebind(query)
-	var commentUsers []CommentUser
-	err = db.SelectContext(ctx, &commentUsers, query, args...)
+	var allPostComments []Comment
+	err = db.SelectContext(ctx, &allPostComments, query, args...)
 	if err != nil {
 		fmt.Println("コメントをまとめて取得で失敗2:", err)
 		return nil, err
 	}
-	builtComments := buildComments(commentUsers)
 
 	commentsMap := map[int][]Comment{}
-	for _, c := range builtComments {
+	for _, c := range allPostComments {
 		commentsMap[c.PostID] = append(commentsMap[c.PostID], c)
 	}
 
@@ -919,8 +871,8 @@ func postComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := "INSERT INTO `comments` (`post_id`, `user_id`, `comment`) VALUES (?,?,?)"
-	_, err = db.ExecContext(ctx, query, postID, me.ID, r.FormValue("comment"))
+	query := "INSERT INTO `comments` (`post_id`, `user_id`, `comment`, `user_account_name`) VALUES (?,?,?,?)"
+	_, err = db.ExecContext(ctx, query, postID, me.ID, r.FormValue("comment"), me.AccountName)
 	if err != nil {
 		log.Print(err)
 		return
@@ -1230,7 +1182,7 @@ func postHtml(w io.Writer, p Post) {
 		w.Write(postHtmlByteArray[12])
 		w.Write([]byte(strconv.Itoa(c.ID)))
 		w.Write(postHtmlByteArray[13])
-		w.Write([]byte(c.User.AccountName))
+		w.Write([]byte(c.UserAccountName))
 		w.Write(postHtmlByteArray[14])
 		w.Write([]byte(c.Comment))
 		w.Write(postHtmlByteArray[15])

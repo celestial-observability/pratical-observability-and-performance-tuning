@@ -39,4 +39,7 @@ rsync -az "${local_app_path}" "${TARGET_HOST}:${remote_app_path}"
 workspace="${remote_app_path}/writeout-images"
 ssh -F "$SSH_CONFIG_FILE" "$TARGET_HOST" "(cd ${workspace} && [ ! -f done ] && /home/isucon/.local/go/bin/go mod tidy && /home/isucon/.local/go/bin/go run main.go && touch done) || echo '画像書き出しは完了済み'"
 
+workspace="${remote_app_path}/set-account-name-to-comments"
+ssh -F "$SSH_CONFIG_FILE" "$TARGET_HOST" "(cd ${workspace} && [ ! -f done ] && ./set-account-name-to-comments.sh && touch done) || echo 'commentsテーブルにAccountNameを付与済み'"
+
 end_timer "$@"
