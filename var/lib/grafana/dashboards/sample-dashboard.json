@@ -332,7 +332,29 @@
           "pluginVersion": "4.14.0",
           "queryType": "table",
           "rawSql": "with data as (\nselect\n  $__timeInterval(TimeUnix) as \"time\"\n  , splitByChar('.', ResourceAttributes['host.name'])[1] as private_ip\n  , Attributes['cpu'] as cpu\n  , Attributes['state'] as state\n  , sum(Value) as v\nfrom otel_metrics_sum\nwhere\n  ( $__fromTime <= time and time <= $__toTime )\n  and MetricName = 'system.cpu.time'\n  and private_ip = 'ip-192-168-1-10'\ngroup by private_ip, Attributes['cpu'], Attributes['state'], time\norder by time asc\n), diff as (\nselect\n  time\n  , private_ip\n  , cpu\n  , state\n  , v - lag(v) over (partition by private_ip, cpu, state order by time) as diff\nfrom data\norder by time\n), total as (\nselect\n  time\n  , private_ip\n  , cpu\n  , sum(diff) as total\nfrom diff\ngroup by time, private_ip, cpu\n)\nselect\n  diff.time\n  , private_ip\n  , cpu\n  , sumIf(diff.diff, diff.state in ('user', 'system')) / total.total * 100 as  \"CPU使用率\"\nfrom diff\njoin total using (time, cpu, private_ip)\nwhere diff.diff >= 0\ngroup by diff.time, private_ip, cpu, total.total\norder by diff.time",
-          "refId": "A"
+          "refId": "web"
+        },
+        {
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "clickhouse-local"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "",
+              "limit": 1000,
+              "mode": "list",
+              "queryType": "table",
+              "table": ""
+            }
+          },
+          "pluginVersion": "4.14.0",
+          "queryType": "table",
+          "rawSql": "with data as (\nselect\n  $__timeInterval(TimeUnix) as \"time\"\n  , splitByChar('.', ResourceAttributes['host.name'])[1] as private_ip\n  , Attributes['cpu'] as cpu\n  , Attributes['state'] as state\n  , sum(Value) as v\nfrom otel_metrics_sum\nwhere\n  ( $__fromTime <= time and time <= $__toTime )\n  and MetricName = 'system.cpu.time'\n  and private_ip = 'ip-192-168-1-30'\ngroup by private_ip, Attributes['cpu'], Attributes['state'], time\norder by time asc\n), diff as (\nselect\n  time\n  , private_ip\n  , cpu\n  , state\n  , v - lag(v) over (partition by private_ip, cpu, state order by time) as diff\nfrom data\norder by time\n), total as (\nselect\n  time\n  , private_ip\n  , cpu\n  , sum(diff) as total\nfrom diff\ngroup by time, private_ip, cpu\n)\nselect\n  diff.time\n  , private_ip\n  , cpu\n  , sumIf(diff.diff, diff.state in ('user', 'system')) / total.total * 100 as  \"CPU使用率\"\nfrom diff\njoin total using (time, cpu, private_ip)\nwhere diff.diff >= 0\ngroup by diff.time, private_ip, cpu, total.total\norder by diff.time",
+          "refId": "perf"
         }
       ],
       "title": "CPU使用率",
