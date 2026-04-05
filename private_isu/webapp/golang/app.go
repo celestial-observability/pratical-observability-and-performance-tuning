@@ -683,23 +683,9 @@ LIMIT 20
 
 	me := getSessionUser(ctx, r)
 
-	fmap := template.FuncMap{
-		"imageURL": imageURL,
-	}
-
-	template.Must(template.New("layout.html").Funcs(fmap).ParseFiles(
-		getTemplPath("layout.html"),
-		getTemplPath("user.html"),
-		getTemplPath("posts.html"),
-		getTemplPath("post.html"),
-	)).Execute(w, struct {
-		Posts          []Post
-		User           User
-		PostCount      int
-		CommentCount   int
-		CommentedCount int
-		Me             User
-	}{posts, user, postCount, commentCount, commentedCount, me})
+	layoutHtml(w, me, func(w2 io.Writer) {
+		userHtml(w2, posts, user, postCount, commentCount, commentedCount)
+	})
 }
 
 func getPosts(w http.ResponseWriter, r *http.Request) {
@@ -1259,4 +1245,26 @@ func postHtml(w io.Writer, p Post) {
 	w.Write(postHtmlByteArray[17])
 	w.Write([]byte(p.CSRFToken))
 	w.Write(postHtmlByteArray[18])
+}
+
+var userHtmlByteArray = [...][]byte{
+	[]byte(`<div class="isu-user"><div><span class="isu-user-account-name">`),
+	[]byte(`さん</span>のページ</div><div>投稿数 <span class="isu-post-count">`),
+	[]byte(`</span></div><div>コメント数 <span class="isu-comment-count">`),
+	[]byte(`</span></div><div>被コメント数 <span class="isu-commented-count">`),
+	[]byte(`</span></div></div>`),
+}
+
+func userHtml(w io.Writer, posts []Post, u User, postCount int, commentsCount int, commentedCount int) {
+	w.Write(userHtmlByteArray[0])
+	w.Write([]byte(u.AccountName))
+	w.Write(userHtmlByteArray[1])
+	w.Write([]byte(strconv.Itoa(postCount)))
+	w.Write(userHtmlByteArray[2])
+	w.Write([]byte(strconv.Itoa(commentsCount)))
+	w.Write(userHtmlByteArray[3])
+	w.Write([]byte(strconv.Itoa(commentedCount)))
+	w.Write(userHtmlByteArray[4])
+
+	postsHtml(w, posts)
 }
