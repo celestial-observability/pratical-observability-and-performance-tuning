@@ -37,16 +37,21 @@ ssh -F "$SSH_CONFIG_FILE" "$TARGET_HOST" "touch ~/.hushlogin" 2>&1 || {
 # 分析準備
 #
 mkdir -p "$TMP_BENCH_SCORE_DIR/var/log/nginx"
+mkdir -p "$TMP_BENCH_SCORE_DIR/var/log/mysql"
 
-# nginxアクセスログをダウンロード
+# nginxアクセスログとMySQLのスロークエリログをダウンロード
 # ログをOFFにしていて存在しない場合は、ダミーログを使用
 if ! rsync -az "$TARGET_HOST":/var/log/nginx/access.log "$TMP_BENCH_SCORE_DIR/var/log/nginx/access.log" 2>/dev/null; then
   log_info "Nginxのアクセスログが見つかりません。ダミーログを使用します。"
   rsync -az "$TARGET_HOST":~/dummy-nginx-access.log "$TMP_BENCH_SCORE_DIR/var/log/nginx/access.log"
 fi
+if ! rsync -az "$TARGET_HOST":/var/log/mysql/mysql-slow.log "$TMP_BENCH_SCORE_DIR/var/log/mysql/mysql-slow.log" 2>/dev/null; then
+  log_info 'MySQLのスロークエリログが見つかりません。ダミーログを使用します。'
+  rsync -az "$TARGET_HOST":~/dummy-mysql-slow.log "$TMP_BENCH_SCORE_DIR/var/log/mysql/mysql-slow.log"
+fi
 
-# 現在日時から70秒前をベンチマーク開始時刻とする
-started_at="$(date -u -v-70S '+%Y-%m-%dT%H:%M:%SZ')"
+# mysql-slow.logから開始時刻を取得する
+started_at="$(head -n10 "$TMP_BENCH_SCORE_DIR/var/log/mysql/mysql-slow.log" | grep '# Time: ' | head -n1 | cut -d' ' -f3)"
 ended_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 if [[ ! -s ./tmp/result.json ]]; then
   jq -n "score: $SCORE" >./tmp/result.json

@@ -1,0 +1,13 @@
+/usr/sbin/mysqld, Version: 8.0.44-0ubuntu0.24.04.1 ((Ubuntu)). started with:
+Tcp port: 3306  Unix socket: /var/run/mysqld/mysqld.sock
+Time                 Id Command    Argument
+# Time: {{START_TIME_UTC}}
+# User@Host: dummy[dummy] @ localhost [127.0.0.1]  Id:     1
+# Query_time: 1.000000  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp={{START_UNIX_TIME_STAMP}};
+SELECT '--------[ Disabled mysql-slow.log: This is a dummy log. ]--------';
+# Time: {{END_TIME_UTC}}
+# User@Host: dummy[dummy] @ localhost [127.0.0.1]  Id:     2
+# Query_time: 0.000001  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0
+SET timestamp={{END_UNIX_TIME_STAMP}};
+SELECT '--------[ Disabled mysql-slow.log: This is a dummy log. ]--------';
