@@ -5,6 +5,10 @@ include makefiles/ssh.mk
 ################################################################################
 # Main
 ################################################################################
+.PHONY: setup
+setup: ## ツール群をインストール
+	@scripts/00-setup.sh web
+
 .PHONY: deploy
 deploy: ## デプロイ
 	@scripts/01-deploy-app.sh web
