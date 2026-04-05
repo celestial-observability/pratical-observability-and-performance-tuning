@@ -1,0 +1,4 @@
+#
+# awsコマンド用
+#
+export AWS_PROFILE=〇〇
